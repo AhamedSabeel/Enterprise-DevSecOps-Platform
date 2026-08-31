@@ -1,0 +1,85 @@
+services:
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: enterprise-postgres
+    environment:
+      POSTGRES_DB: enterprise_db
+      POSTGRES_USER: enterprise_user
+      POSTGRES_PASSWORD: enterprise_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U enterprise_user -d enterprise_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: enterprise-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+
+  worker:
+    build:
+      context: ./application/worker
+    container_name: enterprise-worker
+    environment:
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      redis:
+        condition: service_healthy
+
+
+  backend:
+    build:
+      context: ./application/backend
+    container_name: enterprise-backend-integrated
+    environment:
+      DATABASE_URL: postgresql://enterprise_user:enterprise_password@postgres:5432/enterprise_db
+      REDIS_URL: redis://redis:6379/0
+    ports:
+      - "8003:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+
+  auth-service:
+    build:
+      context: ./application/auth-service
+    container_name: enterprise-auth-service
+    ports:
+      - "8001:8000"
+
+
+
+  frontend:
+    build:
+      context: ./application/frontend
+    container_name: enterprise-frontend
+    ports:
+      - "8080:80"
+    depends_on:
+      backend:
+        condition: service_started
+
+
+
+volumes:
+  postgres_data:
+  redis_data:

@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: enterprise-config
+  namespace: enterprise-devsecops
+data:
+  ENVIRONMENT: "development"
+  REDIS_URL: "redis://redis-service:6379/0"

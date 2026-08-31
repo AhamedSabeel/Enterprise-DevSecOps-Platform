@@ -1,0 +1,68 @@
+name: Enterprise DevSecOps CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+      - master
+
+  pull_request:
+    branches:
+      - main
+      - master
+
+jobs:
+
+  source-validation:
+    name: Source Code Validation
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Validate Project Structure
+        run: |
+          echo "Validating Enterprise DevSecOps Platform structure..."
+
+          test -d application
+          test -d kubernetes
+          test -d infrastructure
+
+          test -f application/backend/Dockerfile
+          test -f application/frontend/Dockerfile
+          test -f application/auth-service/Dockerfile
+
+          echo "Source code validation completed successfully."
+
+
+
+filesystem-security-scan:
+  name: Filesystem Security Scan
+  runs-on: ubuntu-latest
+  needs: source-validation
+
+  steps:
+    - name: Checkout Source Code
+      uses: actions/checkout@v4
+
+    - name: Install Trivy
+      uses: aquasecurity/setup-trivy@v0.2.4
+
+    - name: Run Trivy Filesystem Scan
+      run: |
+        mkdir -p security/reports/ci
+
+        trivy fs \
+          --scanners vuln,secret,misconfig \
+          --severity HIGH,CRITICAL \
+          --format table \
+          --output security/reports/ci/filesystem-security-report.txt \
+          .
+
+    - name: Upload Filesystem Security Report
+      uses: actions/upload-artifact@v4
+      with:
+        name: filesystem-security-report
+        path: security/reports/ci/filesystem-security-report.txt

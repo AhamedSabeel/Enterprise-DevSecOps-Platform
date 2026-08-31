@@ -1,0 +1,14 @@
+fastapi
+uvicorn[standard]
+pydantic
+sqlalchemy
+psycopg2-binary
+redis
+celery[redis]
+python-dotenv
+prometheus-client
+
+# Testing
+pytest
+httpx
+requests

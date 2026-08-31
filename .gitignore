@@ -1,0 +1,42 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+venv/
+.venv/
+
+# Node.js
+node_modules/
+dist/
+
+# Environment files
+.env
+.env.*
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+
+# Logs
+*.log
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+
+
+# Terraform variable files
+*.tfvars
+*.tfvars.json
+
+# Sensitive certificate and key files
+*.pem
+*.key
+
+# Generated security reports
+security/reports/ci/
+security/reports/final/
