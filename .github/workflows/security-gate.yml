@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+
   pull_request:
     branches:
       - main
@@ -24,6 +25,7 @@ jobs:
       - name: Run Gitleaks
         uses: gitleaks/gitleaks-action@v2
 
+
   dependency-scan:
     name: Dependency Vulnerability Scan
     runs-on: ubuntu-latest
@@ -42,6 +44,7 @@ jobs:
           exit-code: 1
           ignore-unfixed: true
 
+
   iac-scan:
     name: Infrastructure Security Scan
     runs-on: ubuntu-latest
@@ -58,6 +61,7 @@ jobs:
           quiet: true
           soft_fail: false
 
+
   kubernetes-validation:
     name: Kubernetes Configuration Validation
     runs-on: ubuntu-latest
@@ -66,15 +70,41 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Validate Kubernetes Manifests
+      - name: Validate Kubernetes Base Manifests
         run: |
-          kubectl apply --dry-run=client --validate=false -f kubernetes/base/
-          kubectl apply --dry-run=client --validate=false -f kubernetes/blue-green/
-          kubectl apply --dry-run=client --validate=false -f kubernetes/enterprise/
+          docker run --rm \
+            -v "$PWD:/work" \
+            ghcr.io/yannh/kubeconform:latest \
+            -strict \
+            -summary \
+            -ignore-missing-schemas \
+            /work/kubernetes/base
+
+      - name: Validate Blue-Green Manifests
+        run: |
+          docker run --rm \
+            -v "$PWD:/work" \
+            ghcr.io/yannh/kubeconform:latest \
+            -strict \
+            -summary \
+            -ignore-missing-schemas \
+            /work/kubernetes/blue-green
+
+      - name: Validate Enterprise Manifests
+        run: |
+          docker run --rm \
+            -v "$PWD:/work" \
+            ghcr.io/yannh/kubeconform:latest \
+            -strict \
+            -summary \
+            -ignore-missing-schemas \
+            /work/kubernetes/enterprise
+
 
   security-summary:
     name: Security Gate
     runs-on: ubuntu-latest
+
     needs:
       - secret-scan
       - dependency-scan
