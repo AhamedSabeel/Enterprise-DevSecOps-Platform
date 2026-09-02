@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: enterprise-devsecops-dev
+  labels:
+    environment: development
+
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: enterprise-devsecops-staging
+  labels:
+    environment: staging
+
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: enterprise-devsecops-prod
+  labels:
+    environment: production

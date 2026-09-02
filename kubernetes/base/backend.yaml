@@ -5,7 +5,16 @@ metadata:
   namespace: enterprise-devsecops
 
 spec:
-  replicas: 2
+  replicas: 3
+
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 1
+
+
+
 
   selector:
     matchLabels:
@@ -34,6 +43,17 @@ spec:
             capabilities:
               drop:
                 - ALL
+          resourecs:
+            request:
+              cpu:"200m"
+              memory:"256Mi"
+            limits:
+              cpu:"500m"
+              memory:"512Mi"
+
+
+
+
 
           ports:
             - containerPort: 8000

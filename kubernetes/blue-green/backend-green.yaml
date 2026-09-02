@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend-green
+  namespace: enterprise-devsecops
+spec:
+  replicas: 2
+
+  selector:
+    matchLabels:
+      app: backend
+      version: green
+
+  template:
+    metadata:
+      labels:
+        app: backend
+        version: green
+
+    spec:
+      containers:
+        - name: backend
+          image: enterprise-devsecops-backend:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8000
