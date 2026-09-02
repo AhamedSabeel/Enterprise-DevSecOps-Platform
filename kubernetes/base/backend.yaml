@@ -43,7 +43,7 @@ spec:
             capabilities:
               drop:
                 - ALL
-          resourecs:
+          resoureces:
             request:
               cpu:"200m"
               memory:"256Mi"
