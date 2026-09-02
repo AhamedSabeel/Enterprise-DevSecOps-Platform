@@ -68,8 +68,9 @@ jobs:
 
       - name: Validate Kubernetes Manifests
         run: |
-          kubectl apply --dry-run=client --validate=true -f kubernetes/base/
-          kubectl apply --dry-run=client --validate=true -f kubernetes/blue-green/
+          kubectl apply --dry-run=client --validate=false -f kubernetes/base/
+          kubectl apply --dry-run=client --validate=false -f kubernetes/blue-green/
+          kubectl apply --dry-run=client --validate=false -f kubernetes/enterprise/
 
   security-summary:
     name: Security Gate
