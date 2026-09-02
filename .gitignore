@@ -40,3 +40,4 @@ dist/
 # Generated security reports
 security/reports/ci/
 security/reports/final/
+security/reports/
