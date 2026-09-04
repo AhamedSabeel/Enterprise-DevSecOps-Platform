@@ -1,3 +1,14 @@
+import asyncio
+import requests
+from opentelemetry.instrumentation.requests import RequestsInstrumentor
+
+from opentelemetry import trace
+from opentelemetry.sdk.resources import Resource
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import BatchSpanProcessor
+from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
+from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+
 import os
 import time
 from datetime import datetime, timezone
@@ -10,6 +21,26 @@ from prometheus_client import Counter, Histogram, make_asgi_app
 from pydantic import BaseModel
 from sqlalchemy import Column, DateTime, Integer, String, create_engine
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
+
+
+resource = Resource.create({
+    "service.name": "backend-service"
+})
+
+provider = TracerProvider(resource=resource)
+trace.set_tracer_provider(provider)
+
+processor = BatchSpanProcessor(
+    OTLPSpanExporter(
+        endpoint="jaeger:4317",
+        insecure=True
+    )
+)
+
+RequestsInstrumentor().instrument()
+
+provider.add_span_processor(processor)
+
 
 DATABASE_URL = os.getenv(
     "DATABASE_URL",
@@ -62,6 +93,7 @@ app = FastAPI(
     version="1.0.0"
 )
 
+FastAPIInstrumentor.instrument_app(app)
 
 app.add_middleware(
     CORSMiddleware,
@@ -234,6 +266,29 @@ def simulate_error():
         status_code=500,
         detail="Simulated application error"
     )
+
+
+
+@app.get("/api/trace-auth")
+def trace_auth_service():
+    response = requests.get("http://auth-service:8001/health")
+
+    return {
+        "backend_status": "success",
+        "auth_service_status": response.status_code,
+        "auth_response": response.json()
+    }
+
+
+@app.get("/api/slow")
+async def slow_request():
+    await asyncio.sleep(5)
+
+    return {
+        "status": "success",
+        "message": "Slow request completed",
+        "delay": "5 seconds"
+    }
 
 
 metrics_app = make_asgi_app()

@@ -1,0 +1,147 @@
+groups:
+  - name: enterprise-devsecops-alerts
+    rules:
+
+      # 1. Application Downtime
+      - alert: ApplicationDown
+        expr: up{job="backend"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          description: "The backend application is not reachable by Prometheus."
+          impact: "Users may be unable to access application services."
+          investigation: "Check container status, application logs, and network connectivity."
+          recovery: "Restart the failed service and investigate the root cause."
+
+      # 2. High Error Rate
+      - alert: HighErrorRate
+        expr: rate(http_requests_total[5m]) > 100
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          description: "The application is experiencing an unusually high request rate that may indicate errors or abnormal behavior."
+          impact: "Application performance and user experience may be affected."
+          investigation: "Check application logs, request patterns, and recent deployments."
+          recovery: "Fix the underlying application issue or roll back the problematic deployment."
+
+      # 3. High CPU Utilization
+      - alert: HighCPUUtilization
+        expr: (1 - avg(rate(node_cpu_seconds_total{mode="idle"}[5m])) by (instance)) * 100 > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          description: "CPU utilization is above 80 percent."
+          impact: "Applications may become slow or unresponsive."
+          investigation: "Check running processes and identify high CPU-consuming workloads."
+          recovery: "Optimize the workload, restart problematic services, or increase resources."
+
+      # 4. High Memory Utilization
+      - alert: HighMemoryUtilization
+        expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 85
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          description: "Memory utilization is above 85 percent."
+          impact: "Applications may experience performance degradation or crashes."
+          investigation: "Check memory-consuming processes and container resource usage."
+          recovery: "Restart the problematic service, optimize memory usage, or increase available memory."
+
+      # 5. Disk Space Exhaustion
+      - alert: DiskSpaceExhaustion
+        expr: (node_filesystem_avail_bytes{fstype!~"tmpfs|overlay"} / node_filesystem_size_bytes{fstype!~"tmpfs|overlay"}) * 100 < 15
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          description: "Available disk space is below 15 percent."
+          impact: "Services may fail to write logs, databases, or application data."
+          investigation: "Check disk usage and identify large files or directories."
+          recovery: "Remove unnecessary files, rotate logs, or increase disk capacity."
+
+      # 6. Database Failure
+      - alert: DatabaseFailure
+        expr: up{job="postgres"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          description: "The PostgreSQL database exporter cannot be reached."
+          impact: "Application database operations may fail."
+          investigation: "Check PostgreSQL container status, logs, and database connectivity."
+          recovery: "Restart PostgreSQL and restore database connectivity."
+
+      # 7. Pod Failure / Service Container Failure
+      - alert: PodFailure
+        expr: up{job=~"backend|auth-service"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          description: "An application service instance is unavailable."
+          impact: "Part of the platform functionality may be unavailable."
+          investigation: "Check the service container status and application logs."
+          recovery: "Restart the failed service and investigate the root cause."
+
+      # 8. Node Failure
+      - alert: NodeFailure
+        expr: up{job="node-exporter"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          description: "The monitored node is unreachable."
+          impact: "Services running on the node may become unavailable."
+          investigation: "Check host connectivity, Docker services, and node health."
+          recovery: "Restore node connectivity or restart the affected infrastructure."
+
+      # 9. Failed Deployment
+      - alert: FailedDeployment
+        expr: changes(up{job="backend"}[5m]) > 3
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          description: "The backend service is repeatedly restarting or becoming unavailable."
+          impact: "A deployment may have failed and application availability may be affected."
+          investigation: "Check deployment logs, container logs, and recent configuration changes."
+          recovery: "Roll back the failed deployment or deploy a corrected version."
+
+      # 10. Security Violation
+      - alert: SecurityViolation
+        expr: increase(http_requests_total[5m]) > 1000
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          description: "Suspiciously high activity has been detected."
+          impact: "The platform may be experiencing malicious or unauthorized activity."
+          investigation: "Review access logs, authentication events, and source IP addresses."
+          recovery: "Block suspicious activity and investigate the security incident."
+
+      # 11. Abnormal Traffic
+      - alert: AbnormalTraffic
+        expr: rate(http_requests_total[1m]) > 50
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          description: "Application traffic is above the expected threshold."
+          impact: "High traffic may cause performance degradation or service instability."
+          investigation: "Check traffic sources, request patterns, and application performance."
+          recovery: "Scale resources or mitigate unexpected traffic."
+
+      # 12. Backup Failure
+      - alert: BackupFailure
+        expr: absent(up{job="postgres"})
+        for: 10m
+        labels:
+          severity: critical
+        annotations:
+          description: "Database monitoring information required for backup validation is unavailable."
+          impact: "Backup reliability cannot be confirmed."
+          investigation: "Check database availability and backup processes."
+          recovery: "Restore database monitoring and execute a successful backup."

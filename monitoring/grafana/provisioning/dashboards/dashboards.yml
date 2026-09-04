@@ -1,0 +1,11 @@
+apiVersion: 1
+
+providers:
+  - name: Enterprise DevSecOps Dashboards
+    orgId: 1
+    folder: Enterprise DevSecOps
+    type: file
+    disableDeletion: false
+    editable: true
+    options:
+      path: /var/lib/grafana/dashboards

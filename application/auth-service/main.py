@@ -1,3 +1,12 @@
+
+
+from opentelemetry import trace
+from opentelemetry.sdk.resources import Resource
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import BatchSpanProcessor
+from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
+from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+
 from datetime import datetime, timedelta, timezone
 
 from fastapi import FastAPI, HTTPException, status, Depends
@@ -8,10 +17,31 @@ from pydantic import BaseModel
 from prometheus_client import Counter, make_asgi_app
 
 
+resource = Resource.create({
+    "service.name": "auth-service"
+})
+
+provider = TracerProvider(resource=resource)
+trace.set_tracer_provider(provider)
+
+processor = BatchSpanProcessor(
+    OTLPSpanExporter(
+        endpoint="jaeger:4317",
+        insecure=True
+    )
+)
+
+provider.add_span_processor(processor)
+
+
 app = FastAPI(
     title="Enterprise DevSecOps Authentication Service",
     version="1.0.0"
 )
+
+
+FastAPIInstrumentor.instrument_app(app)
+
 
 SECRET_KEY = "enterprise-devsecops-development-secret"
 ALGORITHM = "HS256"

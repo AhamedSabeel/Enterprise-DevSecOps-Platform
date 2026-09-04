@@ -2,6 +2,7 @@ services:
 
   postgres:
     image: postgres:16-alpine
+    restart: unless-stopped
     container_name: enterprise-postgres
     environment:
       POSTGRES_DB: enterprise_db
@@ -31,7 +32,6 @@ services:
       timeout: 5s
       retries: 5
 
-
   worker:
     build:
       context: ./application/worker
@@ -46,12 +46,14 @@ services:
   backend:
     build:
       context: ./application/backend
-    container_name: enterprise-backend-integrated
+    restart: always
+    mem_limit: 512m
+    cpus: 1.0
+
     environment:
       DATABASE_URL: postgresql://enterprise_user:enterprise_password@postgres:5432/enterprise_db
       REDIS_URL: redis://redis:6379/0
-    ports:
-      - "8003:8000"
+
     depends_on:
       postgres:
         condition: service_healthy
@@ -59,14 +61,31 @@ services:
         condition: service_healthy
 
 
+
+  backend-load-balancer:
+    image: nginx:alpine
+    container_name: enterprise-backend-load-balancer
+    restart: always
+
+    ports:
+      - "8003:80"
+
+    volumes:
+      - ./load-balancer/nginx.conf:/etc/nginx/nginx.conf:ro
+
+    depends_on:
+      - backend
+
+
+
+
   auth-service:
     build:
       context: ./application/auth-service
     container_name: enterprise-auth-service
+    restart: unless-stopped
     ports:
-      - "8001:8000"
-
-
+      - "8001:8001"
 
   frontend:
     build:
@@ -78,8 +97,105 @@ services:
       backend:
         condition: service_started
 
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: enterprise-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/prometheus/rules:/etc/prometheus/rules:ro
+      - prometheus_data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.retention.time=7d"
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: enterprise-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards
+    depends_on:
+      - prometheus
+      - loki
+
+  loki:
+    image: grafana/loki:latest
+    container_name: enterprise-loki
+    ports:
+      - "3100:3100"
+    command: -config.file=/etc/loki/config.yml
+    volumes:
+      - ./logging/loki/loki-config.yml:/etc/loki/config.yml:ro
+      - loki_data:/loki
+
+  promtail:
+    image: grafana/promtail:latest
+    container_name: enterprise-promtail
+    volumes:
+      - ./logging/promtail/promtail-config.yml:/etc/promtail/config.yml:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    command: -config.file=/etc/promtail/config.yml
+    depends_on:
+      - loki
+
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: enterprise-node-exporter
+    ports:
+      - "9100:9100"
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - "--path.procfs=/host/proc"
+      - "--path.sysfs=/host/sys"
+      - "--path.rootfs=/rootfs"
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.52.1
+    container_name: enterprise-cadvisor
+    ports:
+      - "8081:8080"
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:latest
+    container_name: enterprise-postgres-exporter
+    env_file:
+      - ./monitoring/postgres-exporter/postgres-exporter.env
+    ports:
+      - "9187:9187"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    container_name: enterprise-jaeger
+    ports:
+      - "16686:16686"
+      - "4317:4317"
+      - "4318:4318"
 
 
 volumes:
   postgres_data:
   redis_data:
+  prometheus_data:
+  grafana_data:
+  loki_data:
